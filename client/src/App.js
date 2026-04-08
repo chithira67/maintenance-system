@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Login from './pages/Login';
@@ -46,12 +47,15 @@ function AppRoutes() {
 }
 
 function App() {
+  const theme = createTheme();
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <ToastContainer position="top-right" autoClose={3000} />
-      </AuthProvider>
+      <ThemeProvider theme={theme}>
+        <AuthProvider>
+          <AppRoutes />
+          <ToastContainer position="top-right" autoClose={3000} />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  Avatar,
+} from '@mui/material';
+import { Build as BuildIcon } from '@mui/icons-material';
 
 export default function Login() {
   const { login } = useAuth();
@@ -11,42 +23,75 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    setError('');
+    setLoading(true);
     try {
       const user = await login(form.email, form.password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <h1>🔧 Maintenance System</h1>
-          <p>Sign in to your account</p>
-        </div>
-        {error && <div className="auth-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" placeholder="Enter your email" value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })} required />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" placeholder="Enter your password" value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })} required />
-          </div>
-          <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-        <div className="auth-link">
-          Don't have an account? <Link to="/register">Register</Link>
-        </div>
-      </div>
-    </div>
+    <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
+      <Card sx={{ width: '100%', p: 3 }}>
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Avatar sx={{ m: 'auto', bgcolor: 'primary.main', mb: 2 }}>
+            <BuildIcon />
+          </Avatar>
+          <Typography component="h1" variant="h5" gutterBottom>
+            Maintenance System
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Sign in to your account
+          </Typography>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
+            <Typography variant="body2" sx={{ textAlign: 'center' }}>
+              Don't have an account?{' '}
+              <Link to="/register" style={{ textDecoration: 'none' }}>
+                Register
+              </Link>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
   );
 }

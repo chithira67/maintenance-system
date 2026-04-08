@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  Avatar,
+  Grid,
+} from '@mui/material';
 
 export default function Register() {
   const { register } = useAuth();
@@ -11,56 +23,116 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    setError('');
+    setLoading(true);
     try {
       await register(form);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const setField = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <h1>🔧 Maintenance System</h1>
-          <p>Create your account</p>
-        </div>
-        {error && <div className="auth-error">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Username</label>
-              <input placeholder="username" value={form.username} onChange={set('username')} required />
-            </div>
-            <div className="form-group">
-              <label>Full Name</label>
-              <input placeholder="Your name" value={form.name} onChange={set('name')} required />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" placeholder="email@example.com" value={form.email} onChange={set('email')} required />
-          </div>
-          <div className="form-group">
-            <label>Phone (optional)</label>
-            <input placeholder="+94 77 000 0000" value={form.phone} onChange={set('phone')} />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" placeholder="Create a password" value={form.password} onChange={set('password')} required />
-          </div>
-          <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Creating account...' : 'Register'}
-          </button>
-        </form>
-        <div className="auth-link">
-          Already have an account? <Link to="/login">Sign In</Link>
-        </div>
-      </div>
-    </div>
+    <Box className="auth-page">
+      <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
+        <Card sx={{ width: '100%', p: 3, bgcolor: 'rgba(255,255,255,0.92)' }}>
+          <CardContent sx={{ textAlign: 'center' }}>
+            <Avatar src="/images/logo.png" sx={{ m: 'auto', mb: 2, width: 64, height: 64 }} />
+          <Typography component="h1" variant="h5" gutterBottom>
+            Maintenance System
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Create your account
+          </Typography>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  autoComplete="username"
+                  name="username"
+                  required
+                  fullWidth
+                  id="username"
+                  label="Username"
+                  autoFocus
+                  value={form.username}
+                  onChange={setField('username')}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  required
+                  fullWidth
+                  id="name"
+                  label="Full Name"
+                  name="name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={setField('name')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={setField('email')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  id="phone"
+                  label="Phone (optional)"
+                  name="phone"
+                  autoComplete="tel"
+                  value={form.phone}
+                  onChange={setField('phone')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={setField('password')}
+                />
+              </Grid>
+            </Grid>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
+            >
+              {loading ? 'Creating account...' : 'Register'}
+            </Button>
+            <Typography variant="body2" sx={{ textAlign: 'center' }}>
+              Already have an account?{' '}
+              <Link to="/login" style={{ textDecoration: 'none' }}>
+                Sign In
+              </Link>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
+  </Box>
   );
 }
