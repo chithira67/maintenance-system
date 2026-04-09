@@ -40,7 +40,7 @@ export default function Register() {
   return (
     <Box className="auth-page">
       <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
-        <Card sx={{ width: '100%', p: 3, bgcolor: 'rgba(255,255,255,0.92)' }}>
+        <Card sx={{ width: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center'  }}>
           <CardContent sx={{ textAlign: 'center' }}>
             <Avatar src="/images/logo.png" sx={{ m: 'auto', mb: 2, width: 64, height: 64 }} />
           <Typography component="h1" variant="h5" gutterBottom>

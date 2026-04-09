@@ -12,7 +12,6 @@ import {
   Box,
   Avatar,
 } from '@mui/material';
-import { Build as BuildIcon } from '@mui/icons-material';
 
 export default function Login() {
   const { login } = useAuth();
@@ -26,7 +25,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const user = await login(form.email, form.password);
+      await login(form.email, form.password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -38,10 +37,8 @@ export default function Login() {
   return (
     <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
       <Card sx={{ width: '100%', p: 3 }}>
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Avatar sx={{ m: 'auto', bgcolor: 'primary.main', mb: 2 }}>
-            <BuildIcon />
-          </Avatar>
+        <CardContent sx={{ textAlign: 'center' }}>  {/* ✅ Single CardContent */}
+          <Avatar src="/images/logo.png" sx={{ m: 'auto', mb: 2, width: 64, height: 64 }} />  {/* ✅ Self-closing Avatar */}
           <Typography component="h1" variant="h5" gutterBottom>
             Maintenance System
           </Typography>
