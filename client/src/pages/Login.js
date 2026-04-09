@@ -35,8 +35,19 @@ export default function Login() {
   };
 
   return (
-    <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
-      <Card sx={{ width: '100%', p: 3 }}>
+    <Box 
+      sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center',
+        backgroundImage: `linear-gradient(135deg, rgba(26, 32, 53, 0.85), rgba(42, 58, 110, 0.85)), url('/images/hospital.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
+        <Card sx={{ width: '100%', p: 3 }}>
         <CardContent sx={{ textAlign: 'center' }}>  {/* ✅ Single CardContent */}
           <Avatar src="/images/logo.png" sx={{ m: 'auto', mb: 2, width: 64, height: 64 }} />  {/* ✅ Self-closing Avatar */}
           <Typography component="h1" variant="h5" gutterBottom>
@@ -89,6 +100,7 @@ export default function Login() {
           </Box>
         </CardContent>
       </Card>
-    </Container>
+      </Container>
+    </Box>
   );
 }

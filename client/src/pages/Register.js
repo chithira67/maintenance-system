@@ -38,7 +38,17 @@ export default function Register() {
   const setField = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   return (
-    <Box className="auth-page">
+    <Box 
+      sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center',
+        backgroundImage: `linear-gradient(135deg, rgba(26, 32, 53, 0.85), rgba(42, 58, 110, 0.85)), url('/images/hospital.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       <Container component="main" maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
         <Card sx={{ width: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center'  }}>
           <CardContent sx={{ textAlign: 'center' }}>
@@ -133,6 +143,6 @@ export default function Register() {
         </CardContent>
       </Card>
     </Container>
-  </Box>
+    </Box>
   );
 }
