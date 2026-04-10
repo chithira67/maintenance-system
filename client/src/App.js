@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
 import TasksPage from './pages/TasksPage';
+import MaintenanceCalendar from './pages/MaintenanceCalendar';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
 import Layout from './components/common/Layout';
@@ -37,6 +38,7 @@ function AppRoutes() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Navigate to="/dashboard" />} />
         <Route path="dashboard" element={isAdmin && isAdmin() ? <AdminDashboard /> : <UserDashboard />} />
+        <Route path="calendar" element={<MaintenanceCalendar />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />

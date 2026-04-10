@@ -14,6 +14,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/roles', require('./routes/roles'));
 app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/statuses', require('./routes/statuses'));
+app.use('/api/maintenance-masters', require('./routes/maintenanceMasters'));
 app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/locations', require('./routes/locations'));
 app.use('/api/categories', require('./routes/categories'));

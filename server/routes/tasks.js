@@ -14,6 +14,39 @@ const populate = [
   { path: 'verified_by', select: 'name email' }
 ];
 
+function normalizeDate(date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function getNextDueDate(baseDate, frequency) {
+  if (!frequency) return null;
+  const next = normalizeDate(baseDate);
+
+  switch (frequency) {
+    case 'Daily':
+      next.setDate(next.getDate() + 1);
+      break;
+    case 'Weekly':
+      next.setDate(next.getDate() + 7);
+      break;
+    case 'Monthly':
+      next.setMonth(next.getMonth() + 1);
+      break;
+    case 'Quarterly':
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case 'Annual':
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+    default:
+      return null;
+  }
+
+  return next;
+}
+
 // GET /api/tasks - Admin: all tasks | User: own tasks
 router.get('/', protect, async (req, res) => {
   try {
@@ -37,16 +70,26 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+// Helper to remove blank object IDs
+function sanitizePayload(payload) {
+  const result = { ...payload };
+  ['maintenance_id', 'equipment_id', 'assigned_to'].forEach(field => {
+    if (result[field] === '' || result[field] === null) delete result[field];
+  });
+  return result;
+}
+
 // POST /api/tasks - Admin only
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const task = await MaintenanceTask.create(req.body);
+    const payload = sanitizePayload(req.body);
+    const task = await MaintenanceTask.create(payload);
     await task.populate(populate);
     // Notify assigned user
     if (task.assigned_to) {
       await Notification.create({
         user_id: task.assigned_to._id,
-        message: `New task assigned: ${task.maintenance_id?.reference_no || 'Task'}`
+        message: `New task assigned: ${task.maintenance_id?.reference_no || task.maintenance_reference || 'Task'}`
       });
     }
     await ActivityLog.create({ user_id: req.user._id, action: 'CREATE', table_name: 'MaintenanceTasks', record_id: task._id, new_value: 'Task created' });
@@ -64,7 +107,7 @@ router.put('/:id', protect, async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     const allowedFields = isAdmin
-      ? req.body
+      ? sanitizePayload(req.body)
       : { status_id: req.body.status_id, remarks: req.body.remarks, completed_date: req.body.completed_date };
 
     Object.assign(task, allowedFields);
@@ -81,13 +124,24 @@ router.put('/:id', protect, async (req, res) => {
 router.patch('/:id/complete', protect, async (req, res) => {
   try {
     const doneStatus = await Status.findOne({ status_name: 'Done' });
-    const task = await MaintenanceTask.findByIdAndUpdate(
-      req.params.id,
-      { status_id: doneStatus?._id, completed_date: new Date(), remarks: req.body.remarks },
-      { new: true }
-    ).populate(populate);
-    await ActivityLog.create({ user_id: req.user._id, action: 'COMPLETE', table_name: 'MaintenanceTasks', record_id: task._id, new_value: 'Status set to Done' });
-    res.json(task);
+    const task = await MaintenanceTask.findById(req.params.id).populate('maintenance_id');
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const frequency = task.frequency || task.maintenance_id?.frequencies?.[0] || null;
+    const nextDue = getNextDueDate(new Date(), frequency);
+
+    const update = {
+      status_id: doneStatus?._id,
+      completed_date: new Date(),
+      last_done: new Date(),
+      remarks: req.body.remarks,
+    };
+
+    if (nextDue) update.next_due = nextDue;
+
+    const updatedTask = await MaintenanceTask.findByIdAndUpdate(req.params.id, update, { new: true }).populate(populate);
+    await ActivityLog.create({ user_id: req.user._id, action: 'COMPLETE', table_name: 'MaintenanceTasks', record_id: updatedTask._id, new_value: 'Status set to Done and next due generated' });
+    res.json(updatedTask);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

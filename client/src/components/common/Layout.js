@@ -22,6 +22,7 @@ import {
   Avatar,
 } from '@mui/material';
 import {
+  CalendarToday as CalendarIcon,
   Dashboard as DashboardIcon,
   CheckCircle as TasksIcon,
   People as UsersIcon,
@@ -66,6 +67,7 @@ export default function Layout() {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, to: '/dashboard' },
+    { text: 'Calendar', icon: <CalendarIcon />, to: '/calendar' },
     { text: 'Tasks', icon: <TasksIcon />, to: '/tasks' },
   ];
 

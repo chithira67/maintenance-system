@@ -18,7 +18,7 @@ export default function TasksPage() {
   const [editTask, setEditTask] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusTask, setStatusTask] = useState(null);
-  const [form, setForm] = useState({ maintenance_id: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', priority: 'Medium', remarks: '' });
+  const [form, setForm] = useState({ maintenance_id: '', maintenance_reference: '', maintenance_description: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', frequency: 'Other', priority: 'Medium', remarks: '' });
   const [maintenances, setMaintenances] = useState([]);
 
   const fetchAll = async () => {
@@ -36,20 +36,23 @@ export default function TasksPage() {
   };
 
   useEffect(() => {
-    axios.get('/api/tasks').then(r => setTasks(r.data));
+    axios.get('/api/tasks').then(r => setTasks(r.data)).catch(() => {});
     axios.get('/api/equipment').then(r => setEquipment(r.data)).catch(() => {});
+    axios.get('/api/statuses').then(r => setStatuses(r.data)).catch(() => {});
+    axios.get('/api/maintenance-masters').then(r => setMaintenances(r.data)).catch(() => {});
     if (isAdmin()) {
       axios.get('/api/users').then(r => setUsers(r.data)).catch(() => {});
     }
-    // Get statuses from tasks
     setLoading(false);
   }, []);
 
   const filtered = tasks.filter(t => {
     const q = search.toLowerCase();
+    const maintenanceRef = t.maintenance_id?.reference_no || t.maintenance_reference || '';
+    const maintenanceDesc = t.maintenance_id?.description || t.maintenance_description || '';
     const matchSearch = !q ||
-      t.maintenance_id?.reference_no?.toLowerCase().includes(q) ||
-      t.maintenance_id?.description?.toLowerCase().includes(q) ||
+      maintenanceRef.toLowerCase().includes(q) ||
+      maintenanceDesc.toLowerCase().includes(q) ||
       t.assigned_to?.name?.toLowerCase().includes(q) ||
       t.equipment_id?.equipment_name?.toLowerCase().includes(q);
     const matchStatus = !filterStatus || t.status_id?.status_name === filterStatus;
@@ -60,7 +63,7 @@ export default function TasksPage() {
 
   const openCreate = () => {
     setEditTask(null);
-    setForm({ maintenance_id: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', priority: 'Medium', remarks: '' });
+    setForm({ maintenance_id: '', maintenance_reference: '', maintenance_description: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', frequency: 'Other', priority: 'Medium', remarks: '' });
     setShowModal(true);
   };
 
@@ -68,11 +71,14 @@ export default function TasksPage() {
     setEditTask(task);
     setForm({
       maintenance_id: task.maintenance_id?._id || '',
+      maintenance_reference: task.maintenance_reference || task.maintenance_id?.reference_no || '',
+      maintenance_description: task.maintenance_description || task.maintenance_id?.description || '',
       equipment_id: task.equipment_id?._id || '',
       start_date: task.start_date ? task.start_date.substring(0, 10) : '',
       next_due: task.next_due ? task.next_due.substring(0, 10) : '',
       assigned_to: task.assigned_to?._id || '',
       status_id: task.status_id?._id || '',
+      frequency: task.frequency || 'Other',
       priority: task.priority || 'Medium',
       remarks: task.remarks || ''
     });
@@ -82,11 +88,17 @@ export default function TasksPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
+      const payload = { ...form };
+      ['equipment_id', 'assigned_to'].forEach(field => {
+        if (!payload[field]) delete payload[field];
+      });
+      if (!payload.maintenance_reference) delete payload.maintenance_reference;
+      if (!payload.maintenance_description) delete payload.maintenance_description;
       if (editTask) {
-        await axios.put(`/api/tasks/${editTask._id}`, form);
+        await axios.put(`/api/tasks/${editTask._id}`, payload);
         toast.success('Task updated');
       } else {
-        await axios.post('/api/tasks', form);
+        await axios.post('/api/tasks', payload);
         toast.success('Task created');
       }
       setShowModal(false);
@@ -160,6 +172,7 @@ export default function TasksPage() {
                 <th>Description</th>
                 <th>Equipment</th>
                 <th>Assigned To</th>
+                <th>Frequency</th>
                 <th>Due Date</th>
                 <th>Priority</th>
                 <th>Status</th>
@@ -172,10 +185,11 @@ export default function TasksPage() {
               )}
               {filtered.map(t => (
                 <tr key={t._id}>
-                  <td><strong>{t.maintenance_id?.reference_no || '—'}</strong></td>
-                  <td style={{ maxWidth: 200 }}>{t.maintenance_id?.description?.substring(0, 60) || '—'}</td>
+                  <td><strong>{t.maintenance_id?.reference_no || t.maintenance_reference || '—'}</strong></td>
+                  <td style={{ maxWidth: 200 }}>{t.maintenance_id?.description?.substring(0, 60) || t.maintenance_description?.substring(0, 60) || '—'}</td>
                   <td>{t.equipment_id?.equipment_name || '—'}</td>
                   <td>{t.assigned_to?.name || '—'}</td>
+                  <td>{t.frequency || t.maintenance_id?.frequencies?.[0] || 'Other'}</td>
                   <td>{t.next_due ? new Date(t.next_due).toLocaleDateString() : '—'}</td>
                   <td><span className={`priority-${t.priority?.toLowerCase()}`}>{t.priority}</span></td>
                   <td><span className={`badge badge-${statusColors[t.status_id?.status_name] || 'pending'}`}>{t.status_id?.status_name || '—'}</span></td>
@@ -208,8 +222,38 @@ export default function TasksPage() {
             </div>
             <form onSubmit={handleSave}>
               <div className="form-group">
-                <label>Reference No / Maintenance ID</label>
-                <input placeholder="Maintenance ID" value={form.maintenance_id} onChange={e => setForm({ ...form, maintenance_id: e.target.value })} required />
+                <label>Maintenance Template</label>
+                <select
+                  value={form.maintenance_id}
+                  onChange={e => {
+                    const selectedId = e.target.value;
+                    if (!selectedId) {
+                      setForm({ ...form, maintenance_id: '', maintenance_reference: '', maintenance_description: '' });
+                      return;
+                    }
+                    const selected = maintenances.find(m => m._id === selectedId);
+                    setForm({
+                      ...form,
+                      maintenance_id: selectedId,
+                      maintenance_reference: selected?.reference_no || '',
+                      maintenance_description: selected?.description || ''
+                    });
+                  }}
+                >
+                  <option value="">Choose existing maintenance template</option>
+                  {maintenances.map(m => (
+                    <option key={m._id} value={m._id}>{`${m.reference_no} — ${m.description.substring(0, 60)}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Maintenance Reference</label>
+                <input placeholder="Enter task reference code" value={form.maintenance_reference} onChange={e => setForm({ ...form, maintenance_reference: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>Maintenance Description</label>
+                <input placeholder="Short description" value={form.maintenance_description} onChange={e => setForm({ ...form, maintenance_description: e.target.value })} />
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -239,14 +283,25 @@ export default function TasksPage() {
               </div>
               <div className="form-row">
                 <div className="form-group">
+                  <label>Frequency</label>
+                  <select value={form.frequency} onChange={e => setForm({ ...form, frequency: e.target.value })}>
+                    {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Other'].map(f => <option key={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
                   <label>Priority</label>
                   <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
                     {['Critical', 'High', 'Medium', 'Low'].map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
+              </div>
+              <div className="form-row">
                 <div className="form-group">
-                  <label>Status ID</label>
-                  <input placeholder="Status ID" value={form.status_id} onChange={e => setForm({ ...form, status_id: e.target.value })} required />
+                  <label>Status</label>
+                  <select value={form.status_id} onChange={e => setForm({ ...form, status_id: e.target.value })} required>
+                    <option value="">Select status</option>
+                    {statuses.map(s => <option key={s._id} value={s._id}>{s.status_name}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="form-group">
