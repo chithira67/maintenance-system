@@ -3,9 +3,20 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Role = require('../models/Role');
-const { protect } = require('../middleware/auth');
+const { protect, getPermissionsFromUser } = require('../middleware/auth');
 
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
+
+function userPayload(userDoc) {
+  return {
+    id: userDoc._id,
+    name: userDoc.name,
+    email: userDoc.email,
+    username: userDoc.username,
+    roles: userDoc.roles.map((r) => r.role_name),
+    permissions: getPermissionsFromUser(userDoc),
+  };
+}
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -22,8 +33,9 @@ router.post('/register', async (req, res) => {
     if (!userRole) userRole = await Role.create({ role_name: 'User', description: 'Regular user' });
 
     const user = await User.create({ username, name, email, password_hash: password, phone, roles: [userRole._id] });
+    const populated = await User.findById(user._id).populate('roles');
     const token = signToken(user._id);
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, roles: ['User'] } });
+    res.status(201).json({ token, user: userPayload(populated) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -41,16 +53,7 @@ router.post('/login', async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id);
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-        roles: user.roles.map(r => r.role_name)
-      }
-    });
+    res.json({ token, user: userPayload(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -65,7 +68,8 @@ router.get('/me', protect, async (req, res) => {
     email: user.email,
     username: user.username,
     phone: user.phone,
-    roles: user.roles.map(r => r.role_name)
+    roles: user.roles.map((r) => r.role_name),
+    permissions: getPermissionsFromUser(user),
   });
 });
 
