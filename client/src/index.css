@@ -2,8 +2,8 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f0f2f5;
-  color: #333;
+  background: #f4f6f9;
+  color: #1a202c;
 }
 
 /* Layout */
@@ -59,8 +59,8 @@ body {
   font-size: 14px; font-weight: 500; transition: all 0.2s; display: inline-flex;
   align-items: center; gap: 6px;
 }
-.btn-primary { background: #4f8ef7; color: #fff; }
-.btn-primary:hover { background: #3a7ae0; }
+.btn-primary { background: #1e3a5f; color: #fff; }
+.btn-primary:hover { background: #152a45; }
 .btn-success { background: #38a169; color: #fff; }
 .btn-success:hover { background: #2f8f5b; }
 .btn-danger { background: #e53e3e; color: #fff; }
@@ -69,9 +69,9 @@ body {
 .btn-warning:hover { background: #c05621; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 .btn-outline {
-  background: transparent; border: 1px solid #4f8ef7; color: #4f8ef7;
+  background: transparent; border: 1px solid #1e3a5f; color: #1e3a5f;
 }
-.btn-outline:hover { background: #4f8ef7; color: #fff; }
+.btn-outline:hover { background: #1e3a5f; color: #fff; }
 
 /* Table */
 .table-wrapper { overflow-x: auto; }
@@ -80,6 +80,30 @@ thead { background: #f7fafc; }
 th { padding: 12px 16px; text-align: left; font-weight: 600; color: #4a5568; border-bottom: 2px solid #e2e8f0; }
 td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #4a5568; }
 tr:hover td { background: #f7fafc; }
+
+tr.row-overdue td {
+  background: #fff5f5;
+}
+tr.row-overdue:hover td {
+  background: #fed7d7;
+}
+
+/* Frequency chips (tasks table) */
+.freq-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.freq-daily { background: #fed7d7; color: #822727; }
+.freq-weekly { background: #feebc8; color: #7b341e; }
+.freq-monthly { background: #c6f6d5; color: #22543d; }
+.freq-quarterly { background: #bee3f8; color: #2c5282; }
+.freq-semi-annual { background: #e9d8fd; color: #553c9a; }
+.freq-annual { background: #e9d8fd; color: #44337a; }
+.freq-other { background: #e2e8f0; color: #4a5568; }
 
 /* Badges */
 .badge {
@@ -166,7 +190,7 @@ tr:hover td { background: #f7fafc; }
 
 /* Search bar */
 .search-bar { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; min-width: 220px; }
-.search-bar:focus { border-color: #4f8ef7; }
+.search-bar:focus { border-color: #1e3a5f; }
 
 /* Top bar */
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -216,12 +240,12 @@ tr:hover td { background: #f7fafc; }
 }
 
 .calendar-cell:hover:not(.empty) {
-  border-color: #4f8ef7;
-  box-shadow: 0 12px 25px rgba(79, 142, 247, 0.12);
+  border-color: #1e3a5f;
+  box-shadow: 0 12px 25px rgba(30, 58, 95, 0.12);
 }
 
 .calendar-today {
-  border-color: #4f8ef7;
+  border-color: #1e3a5f;
 }
 
 .calendar-selected {
@@ -230,7 +254,7 @@ tr:hover td { background: #f7fafc; }
 
 .calendar-badge {
   align-self: center;
-  background: #4f8ef7;
+  background: #1e3a5f;
   color: #fff;
   border-radius: 999px;
   padding: 4px 9px;
