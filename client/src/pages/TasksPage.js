@@ -1,23 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Box, Typography, Button, Stack, Chip, Paper } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
-const statusColors = {
-  Pending: 'pending',
-  'In Progress': 'progress',
-  Done: 'done',
-  Verified: 'verified',
-  Overdue: 'overdue',
-  Cancelled: 'cancelled',
-};
-
-const FREQUENCIES = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Other'];
+const statusColors = { Pending: 'pending', 'In Progress': 'progress', Done: 'done', Verified: 'verified', Overdue: 'overdue', Cancelled: 'cancelled' };
 
 export default function TasksPage() {
-  const { user, can } = useAuth();
+  const { isAdmin } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [users, setUsers] = useState([]);
@@ -25,135 +14,62 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterFrequency, setFilterFrequency] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusTask, setStatusTask] = useState(null);
-  const [form, setForm] = useState({
-    task_code: '',
-    maintenance_id: '',
-    maintenance_reference: '',
-    maintenance_description: '',
-    equipment_id: '',
-    start_date: '',
-    next_due: '',
-    assigned_to: '',
-    status_id: '',
-    frequency: 'Other',
-    priority: 'Medium',
-    remarks: '',
-  });
+  const [form, setForm] = useState({ maintenance_id: '', maintenance_reference: '', maintenance_description: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', frequency: 'Other', priority: 'Medium', remarks: '' });
   const [maintenances, setMaintenances] = useState([]);
 
-  const refreshTasks = async () => {
-    const res = await axios.get('/api/tasks');
-    setTasks(res.data);
+  const fetchAll = async () => {
+    setLoading(true);
+    const [tRes, sRes, uRes, eRes] = await Promise.all([
+      axios.get('/api/tasks'),
+      axios.get('/api/tasks').then(() => axios.get('/api/dashboard')).catch(() => ({ data: [] })),
+      axios.get('/api/users').catch(() => ({ data: [] })),
+      axios.get('/api/equipment').catch(() => ({ data: [] }))
+    ]);
+    setTasks(tRes.data);
+    setUsers(uRes.data);
+    setEquipment(eRes.data);
+    setLoading(false);
   };
 
   useEffect(() => {
-    if (!user) return undefined;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const [tRes, sRes, eRes, mRes] = await Promise.all([
-          axios.get('/api/tasks'),
-          axios.get('/api/statuses'),
-          axios.get('/api/equipment'),
-          axios.get('/api/maintenance-masters'),
-        ]);
-        if (cancelled) return;
-        setTasks(tRes.data);
-        setStatuses(sRes.data);
-        setEquipment(eRes.data);
-        setMaintenances(mRes.data);
-
-        const perms = user.permissions || [];
-        const needAssignees = perms.includes('*') || perms.includes('tasks:create') || perms.includes('tasks:assign');
-        if (needAssignees) {
-          try {
-            const uRes = await axios.get('/api/users/assignees');
-            if (!cancelled) setUsers(uRes.data);
-          } catch {
-            if (!cancelled) setUsers([]);
-          }
-        } else {
-          setUsers([]);
-        }
-      } catch (err) {
-        if (!cancelled) toast.error(err.response?.data?.message || 'Failed to load tasks');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    axios.get('/api/tasks').then(r => setTasks(r.data)).catch(() => {});
+    axios.get('/api/equipment').then(r => setEquipment(r.data)).catch(() => {});
+    axios.get('/api/statuses').then(r => setStatuses(r.data)).catch(() => {});
+    axios.get('/api/maintenance-masters').then(r => setMaintenances(r.data)).catch(() => {});
+    if (isAdmin()) {
+      axios.get('/api/users').then(r => setUsers(r.data)).catch(() => {});
     }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
+    setLoading(false);
   }, []);
 
-  const filtered = tasks.filter((t) => {
+  const filtered = tasks.filter(t => {
     const q = search.toLowerCase();
     const maintenanceRef = t.maintenance_id?.reference_no || t.maintenance_reference || '';
     const maintenanceDesc = t.maintenance_id?.description || t.maintenance_description || '';
-    const code = (t.task_code || '').toLowerCase();
-    const matchSearch =
-      !q ||
-      code.includes(q) ||
+    const matchSearch = !q ||
       maintenanceRef.toLowerCase().includes(q) ||
       maintenanceDesc.toLowerCase().includes(q) ||
       t.assigned_to?.name?.toLowerCase().includes(q) ||
       t.equipment_id?.equipment_name?.toLowerCase().includes(q);
-    const matchStatus =
-      !filterStatus || filterStatus === '__overdue__' || t.status_id?.status_name === filterStatus;
-    const freq = t.frequency || t.maintenance_id?.frequencies?.[0] || 'Other';
-    const matchFreq = !filterFrequency || freq === filterFrequency;
-    let matchOverdueOnly = true;
-    if (filterStatus === '__overdue__') {
-      if (!t.next_due) matchOverdueOnly = false;
-      else {
-        const due = new Date(t.next_due);
-        due.setHours(0, 0, 0, 0);
-        matchOverdueOnly = due < today && !['Done', 'Verified', 'Cancelled'].includes(t.status_id?.status_name);
-      }
-    }
-    return matchSearch && matchStatus && matchFreq && matchOverdueOnly;
+    const matchStatus = !filterStatus || t.status_id?.status_name === filterStatus;
+    return matchSearch && matchStatus;
   });
 
-  const uniqueStatuses = useMemo(() => [...new Set(tasks.map((t) => t.status_id?.status_name).filter(Boolean))], [tasks]);
+  const uniqueStatuses = [...new Set(tasks.map(t => t.status_id?.status_name).filter(Boolean))];
 
   const openCreate = () => {
     setEditTask(null);
-    setForm({
-      task_code: '',
-      maintenance_id: '',
-      maintenance_reference: '',
-      maintenance_description: '',
-      equipment_id: '',
-      start_date: '',
-      next_due: '',
-      assigned_to: '',
-      status_id: statuses.find((s) => s.status_name === 'Pending')?._id || '',
-      frequency: 'Other',
-      priority: 'Medium',
-      remarks: '',
-    });
+    setForm({ maintenance_id: '', maintenance_reference: '', maintenance_description: '', equipment_id: '', start_date: '', next_due: '', assigned_to: '', status_id: '', frequency: 'Other', priority: 'Medium', remarks: '' });
     setShowModal(true);
   };
 
   const openEdit = (task) => {
     setEditTask(task);
     setForm({
-      task_code: task.task_code || '',
       maintenance_id: task.maintenance_id?._id || '',
       maintenance_reference: task.maintenance_reference || task.maintenance_id?.reference_no || '',
       maintenance_description: task.maintenance_description || task.maintenance_id?.description || '',
@@ -164,7 +80,7 @@ export default function TasksPage() {
       status_id: task.status_id?._id || '',
       frequency: task.frequency || 'Other',
       priority: task.priority || 'Medium',
-      remarks: task.remarks || '',
+      remarks: task.remarks || ''
     });
     setShowModal(true);
   };
@@ -173,17 +89,21 @@ export default function TasksPage() {
     e.preventDefault();
     try {
       const payload = { ...form };
-      ['equipment_id', 'assigned_to'].forEach((field) => {
+      ['equipment_id', 'assigned_to'].forEach(field => {
         if (!payload[field]) delete payload[field];
       });
       if (!payload.maintenance_reference) delete payload.maintenance_reference;
       if (!payload.maintenance_description) delete payload.maintenance_description;
-      if (!payload.task_code) delete payload.task_code;
-      if (editTask) await axios.put(`/api/tasks/${editTask._id}`, payload);
-      else await axios.post('/api/tasks', payload);
-      toast.success(editTask ? 'Task updated' : 'Task created');
+      if (editTask) {
+        await axios.put(`/api/tasks/${editTask._id}`, payload);
+        toast.success('Task updated');
+      } else {
+        await axios.post('/api/tasks', payload);
+        toast.success('Task created');
+      }
       setShowModal(false);
-      await refreshTasks();
+      const res = await axios.get('/api/tasks');
+      setTasks(res.data);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error saving task');
     }
@@ -199,9 +119,10 @@ export default function TasksPage() {
       await axios.patch(`/api/tasks/${statusTask._id}/complete`, { remarks });
       toast.success('Task marked as complete');
       setShowStatusModal(false);
-      await refreshTasks();
+      const res = await axios.get('/api/tasks');
+      setTasks(res.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error completing task');
+      toast.error('Error completing task');
     }
   };
 
@@ -209,9 +130,10 @@ export default function TasksPage() {
     try {
       await axios.patch(`/api/tasks/${taskId}/verify`);
       toast.success('Task verified');
-      await refreshTasks();
+      const res = await axios.get('/api/tasks');
+      setTasks(res.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error verifying task');
+      toast.error('Error verifying task');
     }
   };
 
@@ -219,74 +141,39 @@ export default function TasksPage() {
     if (!window.confirm('Delete this task?')) return;
     await axios.delete(`/api/tasks/${id}`);
     toast.success('Task deleted');
-    setTasks((prev) => prev.filter((t) => t._id !== id));
+    setTasks(prev => prev.filter(t => t._id !== id));
   };
-
-  const isAssignedToMe = (t) => t.assigned_to && user && String(t.assigned_to._id || t.assigned_to) === String(user.id);
-
-  const canEditTask = (t) => can('tasks:edit') || (can('tasks:edit_own') && isAssignedToMe(t));
-
-  const canShowComplete = (t) =>
-    can('tasks:complete') &&
-    (can('tasks:view_all') || isAssignedToMe(t)) &&
-    !['Done', 'Verified', 'Cancelled'].includes(t.status_id?.status_name);
 
   if (loading) return <div className="loader">Loading tasks...</div>;
 
   return (
-    <Box>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mb: 2, gap: 2 }}>
-        <Box>
-          <Typography variant="h5" gutterBottom>
-            Maintenance tasks
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Preventive work orders, assignments, and completion workflow.
-          </Typography>
-        </Box>
-        {can('tasks:create') && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-            New task
-          </Button>
-        )}
-      </Stack>
+    <div>
+      <div className="page-header">
+        <h2>✅ Maintenance Tasks</h2>
+        {isAdmin() && <button className="btn btn-primary" onClick={openCreate}>+ New Task</button>}
+      </div>
 
-      <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap" alignItems={{ md: 'center' }}>
-          <input className="search-bar" placeholder="Search by ID, reference, equipment, assignee…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, minWidth: 220 }} />
-          <select className="search-bar" style={{ minWidth: 160 }} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="__overdue__">Overdue only</option>
-            {uniqueStatuses.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select className="search-bar" style={{ minWidth: 160 }} value={filterFrequency} onChange={(e) => setFilterFrequency(e.target.value)}>
-            <option value="">All frequencies</option>
-            {FREQUENCIES.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-          <Chip label={`${filtered.length} shown`} variant="outlined" size="small" />
-        </Stack>
-      </Paper>
+      {/* Filters */}
+      <div className="card" style={{ padding: '16px 20px', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input className="search-bar" placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select className="search-bar" style={{ minWidth: 160 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="">All Statuses</option>
+          {uniqueStatuses.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <span style={{ color: '#718096', fontSize: 14 }}>{filtered.length} task(s)</span>
+      </div>
 
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <div className="card">
         <div className="table-wrapper">
           <table>
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Reference</th>
                 <th>Description</th>
                 <th>Equipment</th>
-                <th>Assigned</th>
+                <th>Assigned To</th>
                 <th>Frequency</th>
-                <th>Due</th>
+                <th>Due Date</th>
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -294,210 +181,145 @@ export default function TasksPage() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', color: '#718096', padding: 32 }}>
-                    No tasks match your filters
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#718096', padding: 32 }}>No tasks found</td></tr>
+              )}
+              {filtered.map(t => (
+                <tr key={t._id}>
+                  <td><strong>{t.maintenance_id?.reference_no || t.maintenance_reference || '—'}</strong></td>
+                  <td style={{ maxWidth: 200 }}>{t.maintenance_id?.description?.substring(0, 60) || t.maintenance_description?.substring(0, 60) || '—'}</td>
+                  <td>{t.equipment_id?.equipment_name || '—'}</td>
+                  <td>{t.assigned_to?.name || '—'}</td>
+                  <td>{t.frequency || t.maintenance_id?.frequencies?.[0] || 'Other'}</td>
+                  <td>{t.next_due ? new Date(t.next_due).toLocaleDateString() : '—'}</td>
+                  <td><span className={`priority-${t.priority?.toLowerCase()}`}>{t.priority}</span></td>
+                  <td><span className={`badge badge-${statusColors[t.status_id?.status_name] || 'pending'}`}>{t.status_id?.status_name || '—'}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {t.status_id?.status_name !== 'Done' && t.status_id?.status_name !== 'Verified' && (
+                        <button className="btn btn-success btn-sm" onClick={() => handleComplete(t)}>Complete</button>
+                      )}
+                      {isAdmin() && t.status_id?.status_name === 'Done' && (
+                        <button className="btn btn-primary btn-sm" onClick={() => handleVerify(t._id)}>Verify</button>
+                      )}
+                      {isAdmin() && <button className="btn btn-outline btn-sm" onClick={() => openEdit(t)}>Edit</button>}
+                      {isAdmin() && <button className="btn btn-danger btn-sm" onClick={() => handleDelete(t._id)}>Del</button>}
+                    </div>
                   </td>
                 </tr>
-              )}
-              {filtered.map((t) => {
-                const freq = t.frequency || t.maintenance_id?.frequencies?.[0] || 'Other';
-                const due = t.next_due ? new Date(t.next_due) : null;
-                if (due) due.setHours(0, 0, 0, 0);
-                const isDueOverdue = due && due < today && !['Done', 'Verified', 'Cancelled'].includes(t.status_id?.status_name);
-                return (
-                  <tr key={t._id} className={isDueOverdue ? 'row-overdue' : ''}>
-                    <td>
-                      <strong>{t.task_code || '—'}</strong>
-                    </td>
-                    <td>
-                      <strong>{t.maintenance_id?.reference_no || t.maintenance_reference || '—'}</strong>
-                    </td>
-                    <td style={{ maxWidth: 200 }}>{(t.maintenance_id?.description || t.maintenance_description || '—').slice(0, 80)}</td>
-                    <td>{t.equipment_id?.equipment_name || '—'}</td>
-                    <td>{t.assigned_to?.name || '—'}</td>
-                    <td>
-                      <span className={`freq-chip freq-${freq.replace(/\s+/g, '-').toLowerCase()}`}>{freq}</span>
-                    </td>
-                    <td style={{ color: isDueOverdue ? '#c53030' : undefined, fontWeight: isDueOverdue ? 600 : 400 }}>
-                      {t.next_due ? new Date(t.next_due).toLocaleDateString() : '—'}
-                    </td>
-                    <td>
-                      <span className={`priority-${t.priority?.toLowerCase()}`}>{t.priority}</span>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${statusColors[t.status_id?.status_name] || 'pending'}`}>{t.status_id?.status_name || '—'}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {canShowComplete(t) && (
-                          <button type="button" className="btn btn-success btn-sm" onClick={() => handleComplete(t)}>
-                            Complete
-                          </button>
-                        )}
-                        {can('tasks:verify') && t.status_id?.status_name === 'Done' && (
-                          <button type="button" className="btn btn-primary btn-sm" onClick={() => handleVerify(t._id)}>
-                            Verify
-                          </button>
-                        )}
-                        {canEditTask(t) && (
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => openEdit(t)}>
-                            Edit
-                          </button>
-                        )}
-                        {can('tasks:delete') && (
-                          <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(t._id)}>
-                            Del
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>
-      </Paper>
+      </div>
 
+      {/* Create/Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editTask ? 'Edit task' : 'New task'}</h3>
-              <button type="button" className="modal-close" onClick={() => setShowModal(false)}>
-                ×
-              </button>
+              <h3>{editTask ? 'Edit Task' : 'New Task'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
             <form onSubmit={handleSave}>
               <div className="form-group">
-                <label>Task ID (optional)</label>
-                <input placeholder="e.g. M001" value={form.task_code} onChange={(e) => setForm({ ...form, task_code: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Maintenance template</label>
+                <label>Maintenance Template</label>
                 <select
                   value={form.maintenance_id}
-                  onChange={(e) => {
+                  onChange={e => {
                     const selectedId = e.target.value;
                     if (!selectedId) {
                       setForm({ ...form, maintenance_id: '', maintenance_reference: '', maintenance_description: '' });
                       return;
                     }
-                    const selected = maintenances.find((m) => m._id === selectedId);
+                    const selected = maintenances.find(m => m._id === selectedId);
                     setForm({
                       ...form,
                       maintenance_id: selectedId,
                       maintenance_reference: selected?.reference_no || '',
-                      maintenance_description: selected?.description || '',
+                      maintenance_description: selected?.description || ''
                     });
                   }}
                 >
-                  <option value="">Choose template (optional)</option>
-                  {maintenances.map((m) => (
+                  <option value="">Choose existing maintenance template</option>
+                  {maintenances.map(m => (
                     <option key={m._id} value={m._id}>{`${m.reference_no} — ${m.description.substring(0, 60)}`}</option>
                   ))}
                 </select>
               </div>
+
               <div className="form-group">
-                <label>Reference</label>
-                <input placeholder="Task reference code" value={form.maintenance_reference} onChange={(e) => setForm({ ...form, maintenance_reference: e.target.value })} required />
+                <label>Maintenance Reference</label>
+                <input placeholder="Enter task reference code" value={form.maintenance_reference} onChange={e => setForm({ ...form, maintenance_reference: e.target.value })} required />
               </div>
               <div className="form-group">
-                <label>Description</label>
-                <input placeholder="Short description" value={form.maintenance_description} onChange={(e) => setForm({ ...form, maintenance_description: e.target.value })} />
+                <label>Maintenance Description</label>
+                <input placeholder="Short description" value={form.maintenance_description} onChange={e => setForm({ ...form, maintenance_description: e.target.value })} />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Equipment</label>
-                  <select value={form.equipment_id} onChange={(e) => setForm({ ...form, equipment_id: e.target.value })}>
+                  <select value={form.equipment_id} onChange={e => setForm({ ...form, equipment_id: e.target.value })}>
                     <option value="">Select equipment</option>
-                    {equipment.map((eq) => (
-                      <option key={eq._id} value={eq._id}>
-                        {eq.equipment_name}
-                      </option>
-                    ))}
+                    {equipment.map(eq => <option key={eq._id} value={eq._id}>{eq.equipment_name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Assigned to</label>
-                  <select value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} disabled={!can('tasks:assign') && Boolean(editTask)}>
+                  <label>Assigned To</label>
+                  <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })}>
                     <option value="">Select user</option>
-                    {users.map((u) => (
-                      <option key={u._id} value={u._id}>
-                        {u.name}
-                      </option>
-                    ))}
+                    {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
                   </select>
-                  {!can('tasks:assign') && (
-                    <small style={{ display: 'block', marginTop: 4, color: '#718096', fontSize: 12 }}>Only users with assign permission can change assignee.</small>
-                  )}
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Start date</label>
-                  <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                  <label>Start Date</label>
+                  <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label>Next due</label>
-                  <input type="date" value={form.next_due} onChange={(e) => setForm({ ...form, next_due: e.target.value })} />
+                  <label>Next Due</label>
+                  <input type="date" value={form.next_due} onChange={e => setForm({ ...form, next_due: e.target.value })} />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Frequency</label>
-                  <select value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
-                    {FREQUENCIES.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
+                  <select value={form.frequency} onChange={e => setForm({ ...form, frequency: e.target.value })}>
+                    {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Other'].map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Priority</label>
-                  <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-                    {['Critical', 'High', 'Medium', 'Low'].map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
+                  <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                    {['Critical', 'High', 'Medium', 'Low'].map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Status</label>
-                  <select value={form.status_id} onChange={(e) => setForm({ ...form, status_id: e.target.value })} required>
+                  <select value={form.status_id} onChange={e => setForm({ ...form, status_id: e.target.value })} required>
                     <option value="">Select status</option>
-                    {statuses.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.status_name}
-                      </option>
-                    ))}
+                    {statuses.map(s => <option key={s._id} value={s._id}>{s.status_name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="form-group">
                 <label>Remarks</label>
-                <textarea rows={3} value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
+                <textarea rows={3} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save
-                </button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Task</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Complete Task Modal */}
       {showStatusModal && <CompleteModal task={statusTask} onSubmit={submitComplete} onClose={() => setShowStatusModal(false)} />}
-    </Box>
+    </div>
   );
 }
 
@@ -505,27 +327,19 @@ function CompleteModal({ task, onSubmit, onClose }) {
   const [remarks, setRemarks] = useState('');
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Complete task</h3>
-          <button type="button" className="modal-close" onClick={onClose}>
-            ×
-          </button>
+          <h3>Complete Task</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <p style={{ color: '#718096', marginBottom: 16 }}>
-          Mark <strong>{task?.maintenance_id?.reference_no || task?.task_code}</strong> as done?
-        </p>
+        <p style={{ color: '#718096', marginBottom: 16 }}>Mark <strong>{task?.maintenance_id?.reference_no}</strong> as done?</p>
         <div className="form-group">
           <label>Remarks (optional)</label>
-          <textarea rows={3} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Completion notes…" />
+          <textarea rows={3} value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Add any completion notes..." />
         </div>
         <div className="modal-footer">
-          <button type="button" className="btn btn-outline" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="btn btn-success" onClick={() => onSubmit(remarks)}>
-            Mark complete
-          </button>
+          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-success" onClick={() => onSubmit(remarks)}>Mark Complete</button>
         </div>
       </div>
     </div>

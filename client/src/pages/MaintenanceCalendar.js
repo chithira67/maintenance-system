@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const frequencyLabels = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Other'];
+const frequencyLabels = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Other'];
 const statusColor = { Pending: 'pending', 'In Progress': 'progress', Done: 'done', Verified: 'verified', Overdue: 'overdue', Cancelled: 'cancelled' };
 
 function normalizeDate(date) {

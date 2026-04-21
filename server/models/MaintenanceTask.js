@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const MaintenanceTaskSchema = new mongoose.Schema({
-  task_code:                { type: String, trim: true },
   maintenance_id:           { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceMaster' },
   maintenance_reference:    { type: String },
   maintenance_description:  { type: String },
@@ -10,7 +9,7 @@ const MaintenanceTaskSchema = new mongoose.Schema({
   last_done:                { type: Date },
   next_due:                 { type: Date },
   assigned_to:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  frequency:      { type: String, enum: ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Other'], default: 'Other' },
+  frequency:      { type: String, enum: ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Other'], default: 'Other' },
   status_id:      { type: mongoose.Schema.Types.ObjectId, ref: 'Status', required: true },
   priority:       { type: String, enum: ['Critical', 'High', 'Medium', 'Low'], default: 'Medium' },
   remarks:        { type: String },
