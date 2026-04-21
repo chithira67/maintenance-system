@@ -15,7 +15,6 @@ import MaintenanceCalendar from './pages/MaintenanceCalendar';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
 import MasterDataPage from './pages/MasterDataPage';
-import ImageImportPage from './pages/ImageImportPage';
 import Layout from './components/common/Layout';
 
 const corporateTheme = createTheme({
@@ -84,14 +83,6 @@ function AppRoutes() {
         <Route path="dashboard" element={<DashboardHome />} />
         <Route path="calendar" element={<MaintenanceCalendar />} />
         <Route path="tasks" element={<TasksPage />} />
-        <Route
-          path="import-image"
-          element={
-            <PermissionRoute permission="tasks:create">
-              <ImageImportPage />
-            </PermissionRoute>
-          }
-        />
         <Route
           path="master-data"
           element={

@@ -22,7 +22,6 @@ app.use('/api/locations', require('./routes/locations'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/import', require('./routes/import'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
