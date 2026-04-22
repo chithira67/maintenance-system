@@ -78,10 +78,6 @@ export default function Layout() {
     { text: 'Tasks', icon: <TasksIcon />, to: '/tasks', show: true }
   );
 
-  if (can('tasks:create')) {
-    menuItems.push({ text: 'Import from Image', icon: <UploadIcon />, to: '/import-image', show: true });
-  }
-
   if (can('users:manage')) {
     menuItems.push({ text: 'Users', icon: <UsersIcon />, to: '/users', show: true });
   }
