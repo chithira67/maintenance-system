@@ -101,6 +101,9 @@ export default function Layout() {
         }}
       >
         <Toolbar>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <img src="/images/logo.png" alt="Logo" style={{ height: 40, width: 'auto' }} />
+          </Box>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             Maintenance System
           </Typography>
