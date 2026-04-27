@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import {
   Container,
@@ -27,6 +28,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
+      toast.success('Registration successful! Please sign in.');
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
