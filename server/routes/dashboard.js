@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const MaintenanceTask = require('../models/MaintenanceTask');
 const Status = require('../models/Status');
-const { protect, requirePermission } = require('../middleware/auth');
-const { P } = require('../utils/permissions');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
-router.get('/', protect, requirePermission(P.DASHBOARD_TEAM), async (req, res) => {
+router.get('/', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     const statuses = await Status.find();
     const today = new Date();
@@ -101,18 +100,18 @@ router.get('/', protect, requirePermission(P.DASHBOARD_TEAM), async (req, res) =
   }
 });
 
-router.get('/my', protect, async (req, res) => {
+router.get('/my', verifyToken, async (req, res) => {
   try {
     const statuses = await Status.find();
     const summary = await Promise.all(
       statuses.map(async (s) => ({
         status: s.status_name,
-        count: await MaintenanceTask.countDocuments({ assigned_to: req.user._id, status_id: s._id }),
+        count: await MaintenanceTask.countDocuments({ assigned_to: req.user.id, status_id: s._id }),
       }))
     );
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const overdue = await MaintenanceTask.find({ assigned_to: req.user._id, next_due: { $lt: today } })
+    const overdue = await MaintenanceTask.find({ assigned_to: req.user.id, next_due: { $lt: today } })
       .populate('maintenance_id status_id equipment_id')
       .sort({ next_due: 1 });
 

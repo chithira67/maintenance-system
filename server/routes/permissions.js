@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, requireAnyPermission } = require('../middleware/auth');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 const { P, ALL_KEYS } = require('../utils/permissions');
 
 const LABELS = {
@@ -22,7 +22,7 @@ const LABELS = {
 };
 
 // GET /api/permissions — for role editor UI
-router.get('/', protect, requireAnyPermission(P.ROLES_MANAGE, P.USERS_MANAGE, P.ALL), (req, res) => {
+router.get('/', verifyToken, authorizeRoles('Admin'), (req, res) => {
   res.json({
     keys: ALL_KEYS,
     labels: LABELS,

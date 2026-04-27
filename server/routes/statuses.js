@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Status = require('../models/Status');
-const { protect } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // GET /api/statuses
-router.get('/', protect, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const statuses = await Status.find().sort({ status_name: 1 });
     res.json(statuses);

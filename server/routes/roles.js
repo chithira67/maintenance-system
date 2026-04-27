@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Role = require('../models/Role');
-const { protect, requireAnyPermission, requirePermission } = require('../middleware/auth');
-const { P } = require('../utils/permissions');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
-router.get('/', protect, requireAnyPermission(P.ROLES_VIEW, P.ROLES_MANAGE, P.USERS_MANAGE, P.ALL), async (req, res) => {
+router.get('/', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   const roles = await Role.find().sort({ role_name: 1 });
   res.json(roles);
 });
 
-router.post('/', protect, requirePermission(P.ROLES_MANAGE), async (req, res) => {
+router.post('/', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { role_name, description, permissions } = req.body;
     const role = await Role.create({
@@ -23,7 +22,7 @@ router.post('/', protect, requirePermission(P.ROLES_MANAGE), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, requirePermission(P.ROLES_MANAGE), async (req, res) => {
+router.put('/:id', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { role_name, description, permissions } = req.body;
     const update = {};
@@ -38,7 +37,7 @@ router.put('/:id', protect, requirePermission(P.ROLES_MANAGE), async (req, res) 
   }
 });
 
-router.delete('/:id', protect, requirePermission(P.ROLES_MANAGE), async (req, res) => {
+router.delete('/:id', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     await Role.findByIdAndDelete(req.params.id);
     res.json({ message: 'Role deleted' });

@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const { protect, requirePermission, requireAnyPermission } = require('../middleware/auth');
-const { P } = require('../utils/permissions');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
 // GET /api/users/assignees — minimal list for task assignment (supervisors/admins)
-router.get('/assignees', protect, requireAnyPermission(P.TASKS_ASSIGN, P.TASKS_CREATE, P.ALL), async (req, res) => {
+router.get('/assignees', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     const users = await User.find({ is_active: true }).select('name email username').sort({ name: 1 });
     res.json(users);
@@ -15,7 +14,7 @@ router.get('/assignees', protect, requireAnyPermission(P.TASKS_ASSIGN, P.TASKS_C
 });
 
 // GET /api/users
-router.get('/', protect, requirePermission(P.USERS_MANAGE), async (req, res) => {
+router.get('/', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const users = await User.find().populate('roles', 'role_name permissions').select('-password_hash');
     res.json(users);
@@ -25,7 +24,7 @@ router.get('/', protect, requirePermission(P.USERS_MANAGE), async (req, res) => 
 });
 
 // POST /api/users
-router.post('/', protect, requirePermission(P.USERS_MANAGE), async (req, res) => {
+router.post('/', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { username, name, email, password, phone, roleIds } = req.body;
     const exists = await User.findOne({ $or: [{ email }, { username }] });
@@ -40,7 +39,7 @@ router.post('/', protect, requirePermission(P.USERS_MANAGE), async (req, res) =>
 });
 
 // PUT /api/users/:id
-router.put('/:id', protect, requirePermission(P.USERS_MANAGE), async (req, res) => {
+router.put('/:id', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name, email, phone, is_active, roleIds } = req.body;
     const user = await User.findByIdAndUpdate(
@@ -56,7 +55,7 @@ router.put('/:id', protect, requirePermission(P.USERS_MANAGE), async (req, res) 
 });
 
 // DELETE /api/users/:id — deactivate
-router.delete('/:id', protect, requirePermission(P.USERS_MANAGE), async (req, res) => {
+router.delete('/:id', verifyToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.params.id, { is_active: false });
     res.json({ message: 'User deactivated' });

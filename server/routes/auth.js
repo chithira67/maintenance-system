@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Role = require('../models/Role');
 const { protect, getPermissionsFromUser } = require('../middleware/auth');
 
-const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
+const signToken = (id, role) => jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 
 function userPayload(userDoc) {
   return {
@@ -13,6 +13,7 @@ function userPayload(userDoc) {
     name: userDoc.name,
     email: userDoc.email,
     username: userDoc.username,
+    role: userDoc.roles.length > 0 ? userDoc.roles[0].role_name : 'User',
     roles: userDoc.roles.map((r) => r.role_name),
     permissions: getPermissionsFromUser(userDoc),
   };
@@ -34,7 +35,7 @@ router.post('/register', async (req, res) => {
 
     const user = await User.create({ username, name, email, password_hash: password, phone, roles: [userRole._id] });
     const populated = await User.findById(user._id).populate('roles');
-    const token = signToken(user._id);
+    const token = signToken(user._id, 'User');
     res.status(201).json({ token, user: userPayload(populated) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -52,7 +53,8 @@ router.post('/login', async (req, res) => {
     user.last_login = new Date();
     await user.save({ validateBeforeSave: false });
 
-    const token = signToken(user._id);
+    const role = user.roles.length > 0 ? user.roles[0].role_name : 'User';
+    const token = signToken(user._id, role);
     res.json({ token, user: userPayload(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -60,14 +62,16 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', protect, async (req, res) => {
-  const user = await User.findById(req.user._id).populate('roles');
+router.get('/me', require('../middleware/auth').verifyToken, async (req, res) => {
+  const user = await User.findById(req.user.id).populate('roles');
+  if (!user) return res.status(404).json({ message: 'User not found' });
   res.json({
     id: user._id,
     name: user.name,
     email: user.email,
     username: user.username,
     phone: user.phone,
+    role: req.user.role,
     roles: user.roles.map((r) => r.role_name),
     permissions: getPermissionsFromUser(user),
   });

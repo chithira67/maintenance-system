@@ -107,6 +107,9 @@ export default function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             Maintenance System
           </Typography>
+          <Typography variant="body2" sx={{ mr: 2, color: 'text.secondary' }}>
+            {user?.role}
+          </Typography>
           <IconButton color="inherit" onClick={handleNotificationClick} size="small">
             <Badge badgeContent={unreadCount} color="error">
               <NotificationsIcon />

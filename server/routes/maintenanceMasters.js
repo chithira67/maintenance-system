@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const MaintenanceMaster = require('../models/MaintenanceMaster');
-const { protect, requirePermission } = require('../middleware/auth');
-const { P } = require('../utils/permissions');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
 // GET /api/maintenance-masters
-router.get('/', protect, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const masters = await MaintenanceMaster.find()
       .populate('category_id')
@@ -17,7 +16,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // GET /api/maintenance-masters/:id
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
   try {
     const doc = await MaintenanceMaster.findById(req.params.id).populate('category_id locations responsible_persons');
     if (!doc) return res.status(404).json({ message: 'Not found' });
@@ -28,7 +27,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST /api/maintenance-masters
-router.post('/', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.post('/', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     const master = await MaintenanceMaster.create(req.body);
     await master.populate('category_id');
@@ -39,7 +38,7 @@ router.post('/', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) 
 });
 
 // PUT /api/maintenance-masters/:id
-router.put('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.put('/:id', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     const master = await MaintenanceMaster.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('category_id');
     if (!master) return res.status(404).json({ message: 'Not found' });
@@ -50,7 +49,7 @@ router.put('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res
 });
 
 // DELETE /api/maintenance-masters/:id — soft deactivate
-router.delete('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.delete('/:id', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     const master = await MaintenanceMaster.findByIdAndUpdate(req.params.id, { is_active: false }, { new: true });
     if (!master) return res.status(404).json({ message: 'Not found' });

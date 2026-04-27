@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
-const { protect, requirePermission } = require('../middleware/auth');
-const { P } = require('../utils/permissions');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
-router.get('/', protect, async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   res.json(await Category.find().sort({ category_name: 1 }));
 });
 
-router.post('/', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.post('/', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     res.status(201).json(await Category.create(req.body));
   } catch (e) {
@@ -16,7 +15,7 @@ router.post('/', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) 
   }
 });
 
-router.put('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.put('/:id', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     res.json(await Category.findByIdAndUpdate(req.params.id, req.body, { new: true }));
   } catch (e) {
@@ -24,7 +23,7 @@ router.put('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res
   }
 });
 
-router.delete('/:id', protect, requirePermission(P.MASTERS_MANAGE), async (req, res) => {
+router.delete('/:id', verifyToken, authorizeRoles('Admin', 'Supervisor'), async (req, res) => {
   try {
     await Category.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted' });

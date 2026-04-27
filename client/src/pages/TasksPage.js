@@ -70,8 +70,7 @@ export default function TasksPage() {
         setEquipment(eRes.data);
         setMaintenances(mRes.data);
 
-        const perms = user.permissions || [];
-        const needAssignees = perms.includes('*') || perms.includes('tasks:create') || perms.includes('tasks:assign');
+        const needAssignees = can('tasks:create') || can('tasks:assign');
         if (needAssignees) {
           try {
             const uRes = await axios.get('/api/users/assignees');

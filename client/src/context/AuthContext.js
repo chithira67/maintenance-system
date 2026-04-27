@@ -44,16 +44,44 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasRole = useCallback(
-    (roleName) => Boolean(user?.roles?.includes(roleName)),
+    (roleName) => user?.role === roleName || Boolean(user?.roles?.includes(roleName)),
     [user]
   );
 
   const can = useCallback(
     (permission) => {
-      const perms = user?.permissions;
-      if (!perms || !perms.length) return false;
-      if (perms.includes('*')) return true;
-      return perms.includes(permission);
+      const role = user?.role;
+      if (role === 'Admin') return true;
+      if (role === 'Supervisor') {
+        return [
+          'tasks:view_all',
+          'tasks:create',
+          'tasks:edit',
+          'tasks:assign',
+          'tasks:complete',
+          'tasks:verify',
+          'masters:manage',
+          'dashboard:team',
+          'roles:view',
+        ].includes(permission);
+      }
+      if (role === 'Technician') {
+        return [
+          'tasks:view_assigned',
+          'tasks:edit_own',
+          'tasks:complete',
+          'dashboard:self',
+        ].includes(permission);
+      }
+      if (role === 'User') {
+        return [
+          'tasks:view_assigned',
+          'tasks:edit_own',
+          'tasks:complete',
+          'dashboard:self',
+        ].includes(permission);
+      }
+      return false;
     },
     [user]
   );
